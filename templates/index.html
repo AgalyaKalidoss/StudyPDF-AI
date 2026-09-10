@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>StudyPDF AI</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+
+</head>
+
+
+<body>
+
+
+<div class="app">
+
+
+    <!-- ================= SIDEBAR ================= -->
+
+    <aside class="sidebar">
+
+
+        <div class="brand">
+
+            <div class="brand-icon">
+                S
+            </div>
+
+            <div>
+
+                <h2>StudyPDF</h2>
+
+                <span>
+                    AI Study Assistant
+                </span>
+
+            </div>
+
+        </div>
+
+
+        <div class="menu-title">
+            WORKSPACE
+        </div>
+
+
+        <nav class="sidebar-menu">
+
+
+            <button class="menu-item active">
+
+                <span>⌂</span>
+
+                Dashboard
+
+            </button>
+
+
+            <button class="menu-item"
+                    onclick="focusQuestion()">
+
+                <span>💬</span>
+
+                Ask PDF
+
+            </button>
+
+
+            <button class="menu-item"
+                    onclick="showSummary()">
+
+                <span>📄</span>
+
+                Summary
+
+            </button>
+
+
+            <button class="menu-item"
+                    onclick="generateTwoMark()">
+
+                <span>✏️</span>
+
+                2-Mark Questions
+
+            </button>
+
+
+            <button class="menu-item"
+                    onclick="generateSixteenMark()">
+
+                <span>📝</span>
+
+                16-Mark Questions
+
+            </button>
+
+
+            <button class="menu-item"
+                    onclick="generateImportantQuestions()">
+
+                <span>⭐</span>
+
+                Important Questions
+
+            </button>
+
+
+        </nav>
+
+
+        <div class="sidebar-footer">
+
+            <div class="ai-mini">
+
+                <div class="ai-dot"></div>
+
+                <div>
+
+                    <strong>AI Online</strong>
+
+                    <span>Gemini powered</span>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+    </aside>
+
+
+
+    <!-- ================= MAIN ================= -->
+
+    <main class="main">
+
+
+        <!-- HEADER -->
+
+        <header class="header">
+
+
+            <div>
+
+                <h1>
+                    StudyPDF AI
+                </h1>
+
+                <p>
+                    Your intelligent academic companion
+                </p>
+
+            </div>
+
+
+            <div class="header-status">
+
+                <span></span>
+
+                AI Online
+
+            </div>
+
+
+        </header>
+
+
+
+        <!-- CONTENT -->
+
+        <section class="content">
+
+
+            <!-- HERO -->
+
+            <div class="hero">
+
+
+                <div>
+
+                    <p class="hero-label">
+                        AI-POWERED LEARNING
+                    </p>
+
+
+                    <h2>
+                        Turn your PDFs into
+                        <span>smart study notes.</span>
+                    </h2>
+
+
+                    <p class="hero-description">
+
+                        Upload your study material and let AI
+                        help you understand, revise and prepare
+                        for your exams.
+
+                    </p>
+
+                </div>
+
+
+                <div class="hero-symbol">
+
+                    ✦
+
+                </div>
+
+
+            </div>
+
+
+
+            <!-- STATS -->
+
+            <div class="stats">
+
+
+                <div class="stat-card">
+
+                    <div class="stat-icon">
+                        📄
+                    </div>
+
+                    <div>
+
+                        <span>
+                            PDF STATUS
+                        </span>
+
+                        <strong id="pdfStatus">
+                            Not uploaded
+                        </strong>
+
+                    </div>
+
+                </div>
+
+
+
+                <div class="stat-card">
+
+                    <div class="stat-icon">
+                        🧠
+                    </div>
+
+                    <div>
+
+                        <span>
+                            AI ENGINE
+                        </span>
+
+                        <strong>
+                            Gemini
+                        </strong>
+
+                    </div>
+
+                </div>
+
+
+
+                <div class="stat-card">
+
+                    <div class="stat-icon">
+                        🎯
+                    </div>
+
+                    <div>
+
+                        <span>
+                            STUDY TOOLS
+                        </span>
+
+                        <strong>
+                            5 Tools
+                        </strong>
+
+                    </div>
+
+                </div>
+
+
+            </div>
+
+
+
+            <!-- UPLOAD -->
+
+            <div class="upload-card">
+
+
+                <div class="upload-content">
+
+
+                    <div class="upload-icon">
+                        ↑
+                    </div>
+
+
+                    <h2>
+                        Upload your study PDF
+                    </h2>
+
+
+                    <p>
+                        Upload lecture notes, textbooks,
+                        question papers or study material.
+                    </p>
+
+
+                    <label class="upload-btn">
+
+                        Choose PDF
+
+                        <input
+                            type="file"
+                            id="pdfInput"
+                            accept=".pdf"
+                            hidden
+                        >
+
+                    </label>
+
+
+                    <p class="upload-hint">
+                        PDF files only
+                    </p>
+
+
+                    <div id="uploadStatus"></div>
+
+
+                </div>
+
+
+            </div>
+
+
+
+            <!-- QUICK TOOLS -->
+
+            <div class="section-heading">
+
+                <div>
+
+                    <h2>
+                        Study tools
+                    </h2>
+
+                    <p>
+                        Generate exam-ready content instantly.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <div class="tools">
+
+
+                <button class="tool-card"
+                        onclick="showSummary()">
+
+                    <div class="tool-icon purple">
+                        📄
+                    </div>
+
+                    <div>
+
+                        <h3>
+                            Smart Summary
+                        </h3>
+
+                        <p>
+                            Convert your PDF into
+                            concise revision notes.
+                        </p>
+
+                    </div>
+
+                    <span class="arrow">
+                        →
+                    </span>
+
+                </button>
+
+
+
+                <button class="tool-card"
+                        onclick="generateTwoMark()">
+
+                    <div class="tool-icon light-purple">
+                        ✏️
+                    </div>
+
+                    <div>
+
+                        <h3>
+                            2-Mark Questions
+                        </h3>
+
+                        <p>
+                            Practice short-answer
+                            exam questions.
+                        </p>
+
+                    </div>
+
+                    <span class="arrow">
+                        →
+                    </span>
+
+                </button>
+
+
+
+                <button class="tool-card"
+                        onclick="generateSixteenMark()">
+
+                    <div class="tool-icon purple">
+                        📝
+                    </div>
+
+                    <div>
+
+                        <h3>
+                            16-Mark Questions
+                        </h3>
+
+                        <p>
+                            Generate detailed
+                            exam answers.
+                        </p>
+
+                    </div>
+
+                    <span class="arrow">
+                        →
+                    </span>
+
+                </button>
+
+
+
+                <button class="tool-card"
+                        onclick="generateImportantQuestions()">
+
+                    <div class="tool-icon light-purple">
+                        ⭐
+                    </div>
+
+                    <div>
+
+                        <h3>
+                            Important Questions
+                        </h3>
+
+                        <p>
+                            Find high-priority
+                            questions to prepare.
+                        </p>
+
+                    </div>
+
+                    <span class="arrow">
+                        →
+                    </span>
+
+                </button>
+
+
+            </div>
+
+
+
+            <!-- CHAT -->
+
+            <div class="chat-section">
+
+
+                <div class="section-heading">
+
+                    <div>
+
+                        <h2>
+                            Ask your PDF
+                        </h2>
+
+                        <p>
+                            Ask questions and get answers
+                            directly from your study material.
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+
+                <div class="chat-card">
+
+
+                    <div id="chatMessages"
+                         class="chat-messages">
+
+
+                        <div class="welcome">
+
+
+                            <div class="ai-avatar">
+                                AI
+                            </div>
+
+
+                            <div>
+
+                                <strong>
+                                    StudyPDF AI
+                                </strong>
+
+                                <p>
+                                    Upload your PDF and ask me
+                                    anything about your study material.
+                                </p>
+
+                            </div>
+
+
+                        </div>
+
+
+                    </div>
+
+
+
+                    <div class="question-box">
+
+
+                        <input
+                            type="text"
+                            id="questionInput"
+                            placeholder="Ask something about your PDF..."
+                        >
+
+
+                        <button onclick="askQuestion()">
+
+                            <span>Ask</span>
+
+                            ➤
+
+                        </button>
+
+
+                    </div>
+
+
+                </div>
+
+
+            </div>
+
+
+
+            <!-- RESULT -->
+
+            <div id="resultCard"
+                 class="result-card hidden">
+
+
+                <div class="result-top">
+
+                    <div>
+
+                        <span>
+                            AI GENERATED
+                        </span>
+
+                        <h2>
+                            Study Result
+                        </h2>
+
+                    </div>
+
+
+                    <button onclick="closeResult()">
+                        ×
+                    </button>
+
+                </div>
+
+
+                <div id="resultContent"></div>
+
+
+            </div>
+
+
+        </section>
+
+
+    </main>
+
+
+</div>
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+<script src="{{ url_for('static', filename='js/app.js') }}">
+</script>
+
+
+</body>
+
+</html>
