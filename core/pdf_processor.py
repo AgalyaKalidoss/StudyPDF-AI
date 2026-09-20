@@ -3,10 +3,7 @@ import pymupdf
 
 def extract_pdf_content(uploaded_file):
     """
-    Extract text from an uploaded PDF.
-
-    Returns:
-        A list of dictionaries containing page number and text.
+    Extract text from a Flask uploaded PDF file.
     """
 
     uploaded_file.seek(0)
@@ -24,31 +21,40 @@ def extract_pdf_content(uploaded_file):
 
         text = page.get_text("text").strip()
 
-        pages.append({
-            "page": page_number,
-            "text": text
-        })
+        if text:
+            pages.append({
+                "page": page_number,
+                "text": text
+            })
 
     document.close()
 
     return pages
 
 
-def extract_text_from_pdf(uploaded_file):
+def extract_text_from_pdf(source):
     """
-    Compatibility function for the Flask application.
-
-    Returns the complete extracted PDF text.
+    Extract complete text from either:
+    - Flask uploaded file object
+    - PDF file path
     """
 
-    pages = extract_pdf_content(uploaded_file)
+    if isinstance(source, str):
+
+        with open(source, "rb") as file:
+
+            pages = extract_pdf_content(file)
+
+    else:
+
+        pages = extract_pdf_content(source)
 
     return get_full_text(pages)
 
 
 def get_full_text(pages):
     """
-    Combine all extracted pages into one text string.
+    Combine all page text into one string.
     """
 
     sections = []
@@ -67,37 +73,18 @@ def get_full_text(pages):
 
 
 def get_page_count(pages):
-    """
-    Return the number of pages.
-    """
-
     return len(pages)
 
 
 def get_word_count(pages):
-    """
-    Return the number of words.
-    """
-
-    full_text = get_full_text(pages)
-
-    return len(full_text.split())
+    return len(get_full_text(pages).split())
 
 
 def get_character_count(pages):
-    """
-    Return the number of characters.
-    """
-
-    full_text = get_full_text(pages)
-
-    return len(full_text)
+    return len(get_full_text(pages))
 
 
 def get_non_empty_pages(pages):
-    """
-    Return only pages containing text.
-    """
 
     return [
         page
