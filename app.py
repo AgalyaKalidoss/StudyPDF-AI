@@ -1,5 +1,15 @@
-from flask import Flask, render_template, request, jsonify
 import os
+import uuid
+
+from flask import (
+    Flask,
+    render_template,
+    request,
+    jsonify,
+    session
+)
+
+from werkzeug.utils import secure_filename
 
 from core.pdf_processor import extract_text_from_pdf
 
@@ -14,303 +24,520 @@ from core.ai_engine import (
 
 app = Flask(__name__)
 
-app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024
+# Secret key for Flask sessions
+app.secret_key = os.environ.get(
+    "SECRET_KEY",
+    "studypdf-ai-secret-key"
+)
+
+# Upload settings
+UPLOAD_FOLDER = "uploads"
+
+os.makedirs(
+    UPLOAD_FOLDER,
+    exist_ok=True
+)
+
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+
+app.config["MAX_CONTENT_LENGTH"] = (
+    20 * 1024 * 1024
+)
 
 
-# ==========================================
+# =====================================================
 # HOME
-# ==========================================
+# =====================================================
 
 @app.route("/")
 def home():
-    return render_template("index.html")
+
+    return render_template(
+        "index.html"
+    )
 
 
-# ==========================================
-# UPLOAD PDF
-# ==========================================
+# =====================================================
+# GET CURRENT PDF TEXT
+# =====================================================
 
-@app.route("/upload", methods=["POST"])
-def upload_pdf():
+def get_current_pdf_text():
+
+    filename = session.get(
+        "pdf_filename"
+    )
+
+    if not filename:
+
+        return None
+
+    file_path = os.path.join(
+        app.config["UPLOAD_FOLDER"],
+        filename
+    )
+
+    if not os.path.exists(file_path):
+
+        session.pop(
+            "pdf_filename",
+            None
+        )
+
+        return None
 
     try:
 
-        if "pdf" not in request.files:
+        text = extract_text_from_pdf(
+            file_path
+        )
 
-            return jsonify({
-                "success": False,
-                "message": "No PDF selected."
-            }), 400
+        return text
 
-        file = request.files["pdf"]
+    except Exception:
 
-        if not file or file.filename == "":
+        return None
 
-            return jsonify({
-                "success": False,
-                "message": "Please select a PDF."
-            }), 400
 
-        if not file.filename.lower().endswith(".pdf"):
+# =====================================================
+# UPLOAD PDF
+# =====================================================
 
-            return jsonify({
-                "success": False,
-                "message": "Only PDF files are allowed."
-            }), 400
+@app.route(
+    "/upload",
+    methods=["POST"]
+)
+def upload_pdf():
 
-        # Extract text directly from uploaded file
-        extracted_text = extract_text_from_pdf(file)
-
-        if not extracted_text.strip():
-
-            return jsonify({
-                "success": False,
-                "message": (
-                    "No readable text was found in this PDF. "
-                    "If this is a scanned PDF, OCR is required."
-                )
-            }), 400
-
-        return jsonify({
-            "success": True,
-            "message": "PDF uploaded successfully.",
-            "filename": file.filename,
-            "characters": len(extracted_text),
-            "words": len(extracted_text.split()),
-            "pdf_text": extracted_text
-        })
-
-    except Exception as e:
-
-        print("UPLOAD ERROR:", repr(e))
+    if "pdf" not in request.files:
 
         return jsonify({
             "success": False,
-            "message": f"PDF processing error: {str(e)}"
-        }), 500
+            "message": "No PDF selected."
+        }), 400
 
 
-# ==========================================
-# ASK QUESTION
-# ==========================================
+    file = request.files["pdf"]
 
-@app.route("/ask", methods=["POST"])
-def ask():
+
+    if file.filename == "":
+
+        return jsonify({
+            "success": False,
+            "message": "Please select a PDF."
+        }), 400
+
+
+    if not file.filename.lower().endswith(".pdf"):
+
+        return jsonify({
+            "success": False,
+            "message": "Only PDF files are allowed."
+        }), 400
+
+
+    # Remove previous PDF belonging to this session
+    old_filename = session.get(
+        "pdf_filename"
+    )
+
+    if old_filename:
+
+        old_path = os.path.join(
+            app.config["UPLOAD_FOLDER"],
+            old_filename
+        )
+
+        if os.path.exists(old_path):
+
+            try:
+                os.remove(old_path)
+
+            except Exception:
+                pass
+
+
+    # Create unique filename
+    original_name = secure_filename(
+        file.filename
+    )
+
+    unique_filename = (
+        f"{uuid.uuid4().hex}_{original_name}"
+    )
+
+
+    file_path = os.path.join(
+        app.config["UPLOAD_FOLDER"],
+        unique_filename
+    )
+
 
     try:
 
-        data = request.get_json(silent=True) or {}
+        # Save PDF
+        file.save(file_path)
 
-        question = str(
-            data.get("question", "")
-        ).strip()
 
-        pdf_text = str(
-            data.get("pdf_text", "")
-        ).strip()
+        # Extract text to verify PDF
+        text = extract_text_from_pdf(
+            file_path
+        )
 
-        if not pdf_text:
 
-            return jsonify({
-                "success": False,
-                "answer": "Please upload a PDF first."
-            }), 400
+        if not text.strip():
 
-        if not question:
+            os.remove(file_path)
 
             return jsonify({
                 "success": False,
-                "answer": "Please enter a question."
+                "message":
+                    "No readable text found in this PDF."
             }), 400
+
+
+        # Store filename in session
+        session["pdf_filename"] = (
+            unique_filename
+        )
+
+        session.modified = True
+
+
+        return jsonify({
+
+            "success": True,
+
+            "message":
+                "PDF uploaded successfully.",
+
+            "filename":
+                original_name,
+
+            "characters":
+                len(text),
+
+            "words":
+                len(text.split())
+
+        })
+
+
+    except Exception as e:
+
+        if os.path.exists(file_path):
+
+            try:
+                os.remove(file_path)
+
+            except Exception:
+                pass
+
+
+        return jsonify({
+
+            "success": False,
+
+            "message":
+                f"PDF processing failed: {str(e)}"
+
+        }), 500
+
+
+# =====================================================
+# ASK PDF
+# =====================================================
+
+@app.route(
+    "/ask",
+    methods=["POST"]
+)
+def ask():
+
+    pdf_text = get_current_pdf_text()
+
+
+    if not pdf_text:
+
+        return jsonify({
+
+            "success": False,
+
+            "answer":
+                "Please upload a PDF first."
+
+        }), 400
+
+
+    data = request.get_json(
+        silent=True
+    ) or {}
+
+
+    question = data.get(
+        "question",
+        ""
+    ).strip()
+
+
+    if not question:
+
+        return jsonify({
+
+            "success": False,
+
+            "answer":
+                "Please enter a question."
+
+        }), 400
+
+
+    try:
 
         answer = ask_pdf(
             question,
             pdf_text
         )
 
+
         return jsonify({
+
             "success": True,
+
             "answer": answer
+
         })
+
 
     except Exception as e:
 
-        print("ASK ERROR:", repr(e))
-
         return jsonify({
+
             "success": False,
-            "answer": f"AI Error: {str(e)}"
+
+            "answer":
+                f"AI Error: {str(e)}"
+
         }), 500
 
 
-# ==========================================
+# =====================================================
 # SUMMARY
-# ==========================================
+# =====================================================
 
-@app.route("/summary", methods=["POST"])
+@app.route(
+    "/summary",
+    methods=["POST"]
+)
 def summary():
 
-    try:
+    pdf_text = get_current_pdf_text()
 
-        data = request.get_json(silent=True) or {}
 
-        pdf_text = str(
-            data.get("pdf_text", "")
-        ).strip()
-
-        if not pdf_text:
-
-            return jsonify({
-                "success": False,
-                "answer": "Please upload a PDF first."
-            }), 400
-
-        result = summarize_pdf(pdf_text)
+    if not pdf_text:
 
         return jsonify({
+
+            "success": False,
+
+            "answer":
+                "Please upload a PDF first."
+
+        }), 400
+
+
+    try:
+
+        result = summarize_pdf(
+            pdf_text
+        )
+
+
+        return jsonify({
+
             "success": True,
+
             "answer": result
+
         })
+
 
     except Exception as e:
 
-        print("SUMMARY ERROR:", repr(e))
-
         return jsonify({
+
             "success": False,
-            "answer": f"AI Error: {str(e)}"
+
+            "answer":
+                f"AI Error: {str(e)}"
+
         }), 500
 
 
-# ==========================================
+# =====================================================
 # 2-MARK QUESTIONS
-# ==========================================
+# =====================================================
 
-@app.route("/two-mark", methods=["POST"])
+@app.route(
+    "/two-mark",
+    methods=["POST"]
+)
 def two_mark():
 
+    pdf_text = get_current_pdf_text()
+
+
+    if not pdf_text:
+
+        return jsonify({
+
+            "success": False,
+
+            "answer":
+                "Please upload a PDF first."
+
+        }), 400
+
+
     try:
-
-        data = request.get_json(silent=True) or {}
-
-        pdf_text = str(
-            data.get("pdf_text", "")
-        ).strip()
-
-        if not pdf_text:
-
-            return jsonify({
-                "success": False,
-                "answer": "Please upload a PDF first."
-            }), 400
 
         result = generate_two_mark_questions(
             pdf_text,
-            10
+            count=10
         )
 
+
         return jsonify({
+
             "success": True,
+
             "answer": result
+
         })
+
 
     except Exception as e:
 
-        print("2-MARK ERROR:", repr(e))
-
         return jsonify({
+
             "success": False,
-            "answer": f"AI Error: {str(e)}"
+
+            "answer":
+                f"AI Error: {str(e)}"
+
         }), 500
 
 
-# ==========================================
+# =====================================================
 # 16-MARK QUESTIONS
-# ==========================================
+# =====================================================
 
-@app.route("/sixteen-mark", methods=["POST"])
+@app.route(
+    "/sixteen-mark",
+    methods=["POST"]
+)
 def sixteen_mark():
 
+    pdf_text = get_current_pdf_text()
+
+
+    if not pdf_text:
+
+        return jsonify({
+
+            "success": False,
+
+            "answer":
+                "Please upload a PDF first."
+
+        }), 400
+
+
     try:
-
-        data = request.get_json(silent=True) or {}
-
-        pdf_text = str(
-            data.get("pdf_text", "")
-        ).strip()
-
-        if not pdf_text:
-
-            return jsonify({
-                "success": False,
-                "answer": "Please upload a PDF first."
-            }), 400
 
         result = generate_sixteen_mark_questions(
             pdf_text,
-            5
+            count=5
         )
 
+
         return jsonify({
+
             "success": True,
+
             "answer": result
+
         })
+
 
     except Exception as e:
 
-        print("16-MARK ERROR:", repr(e))
-
         return jsonify({
+
             "success": False,
-            "answer": f"AI Error: {str(e)}"
+
+            "answer":
+                f"AI Error: {str(e)}"
+
         }), 500
 
 
-# ==========================================
+# =====================================================
 # IMPORTANT QUESTIONS
-# ==========================================
+# =====================================================
 
-@app.route("/important-questions", methods=["POST"])
+@app.route(
+    "/important-questions",
+    methods=["POST"]
+)
 def important_questions():
+
+    pdf_text = get_current_pdf_text()
+
+
+    if not pdf_text:
+
+        return jsonify({
+
+            "success": False,
+
+            "answer":
+                "Please upload a PDF first."
+
+        }), 400
+
 
     try:
 
-        data = request.get_json(silent=True) or {}
-
-        pdf_text = str(
-            data.get("pdf_text", "")
-        ).strip()
-
-        if not pdf_text:
-
-            return jsonify({
-                "success": False,
-                "answer": "Please upload a PDF first."
-            }), 400
-
         result = generate_important_questions(
             pdf_text,
-            15
+            count=15
         )
 
+
         return jsonify({
+
             "success": True,
+
             "answer": result
+
         })
+
 
     except Exception as e:
 
-        print("IMPORTANT QUESTIONS ERROR:", repr(e))
-
         return jsonify({
+
             "success": False,
-            "answer": f"AI Error: {str(e)}"
+
+            "answer":
+                f"AI Error: {str(e)}"
+
         }), 500
 
 
-# ==========================================
+# =====================================================
 # RUN
-# ==========================================
+# =====================================================
 
 if __name__ == "__main__":
 
