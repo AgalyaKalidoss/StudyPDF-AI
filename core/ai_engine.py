@@ -3,40 +3,43 @@ from google import genai
 from config import GOOGLE_API_KEY
 
 
-# Create Gemini client
-client = genai.Client(api_key=GOOGLE_API_KEY)
+client = genai.Client(
+    api_key=GOOGLE_API_KEY
+)
 
 
-MODEL_NAME = "gemini-3.6-flash"
+MODEL_NAME = "gemini-2.0-flash"
 
 
 def generate_response(prompt):
-    """
-    Send a prompt to Gemini and return the generated response.
-    """
 
     try:
-        interaction = client.interactions.create(
+
+        response = client.models.generate_content(
             model=MODEL_NAME,
-            input=prompt
+            contents=prompt
         )
 
-        return interaction.output_text.strip()
+        if response and response.text:
+
+            return response.text.strip()
+
+        return "No response was generated."
 
     except Exception as e:
+
+        print("GEMINI ERROR:", e)
+
         return f"AI Error: {str(e)}"
 
 
 def ask_pdf(question, pdf_text):
-    """
-    Answer a question using only the uploaded PDF.
-    """
 
     prompt = f"""
 You are StudyPDF AI, an academic assistant.
 
-Answer the student's question using ONLY the information
-provided in the PDF content.
+Answer the student's question using ONLY
+the information provided in the PDF.
 
 If the answer cannot be found in the PDF, say:
 
@@ -57,9 +60,6 @@ PDF Content:
 
 
 def summarize_pdf(pdf_text):
-    """
-    Generate a structured summary of the PDF.
-    """
 
     prompt = f"""
 You are StudyPDF AI.
@@ -90,9 +90,6 @@ PDF Content:
 
 
 def extract_topic(topic, pdf_text):
-    """
-    Explain a specific topic from the PDF.
-    """
 
     prompt = f"""
 You are StudyPDF AI.
@@ -129,9 +126,6 @@ PDF Content:
 
 
 def generate_two_mark_questions(pdf_text, count=10):
-    """
-    Generate important 2-mark questions.
-    """
 
     prompt = f"""
 You are an expert university examination question generator.
@@ -154,7 +148,9 @@ Focus on:
 - Important facts
 - Short explanations
 
-Avoid duplicates and do not invent information.
+Avoid duplicates.
+
+Do not invent information.
 
 PDF Content:
 {pdf_text}
@@ -164,9 +160,6 @@ PDF Content:
 
 
 def generate_sixteen_mark_questions(pdf_text, count=5):
-    """
-    Generate detailed 16-mark questions and answers.
-    """
 
     prompt = f"""
 You are an expert university examination preparation assistant.
@@ -206,15 +199,12 @@ PDF Content:
 
 
 def generate_important_questions(pdf_text, count=15):
-    """
-    Identify important examination questions.
-    """
 
     prompt = f"""
 You are an experienced university exam preparation expert.
 
-Analyze the uploaded PDF and identify the {count}
-most important questions.
+Analyze the uploaded PDF and identify {count}
+important examination questions.
 
 Divide them into:
 
