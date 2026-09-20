@@ -14,15 +14,10 @@ from core.ai_engine import (
 
 app = Flask(__name__)
 
-UPLOAD_FOLDER = "uploads"
 
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
-
-# Store extracted PDF text temporarily
-pdf_text = ""
-
+# =========================
+# HOME
+# =========================
 
 @app.route("/")
 def home():
@@ -30,13 +25,11 @@ def home():
 
 
 # =========================
-# PDF UPLOAD
+# UPLOAD PDF
 # =========================
 
 @app.route("/upload", methods=["POST"])
 def upload_pdf():
-
-    global pdf_text
 
     try:
 
@@ -63,10 +56,10 @@ def upload_pdf():
                 "message": "Only PDF files are allowed."
             }), 400
 
-        # Extract directly from uploaded file
-        pdf_text = extract_text_from_pdf(file)
+        # Extract text directly from uploaded PDF
+        extracted_text = extract_text_from_pdf(file)
 
-        if not pdf_text.strip():
+        if not extracted_text.strip():
 
             return jsonify({
                 "success": False,
@@ -77,8 +70,11 @@ def upload_pdf():
             "success": True,
             "message": "PDF uploaded successfully.",
             "filename": file.filename,
-            "characters": len(pdf_text),
-            "words": len(pdf_text.split())
+            "characters": len(extracted_text),
+            "words": len(extracted_text.split()),
+
+            # Send extracted text to browser
+            "pdf_text": extracted_text
         })
 
     except Exception as e:
@@ -98,9 +94,19 @@ def upload_pdf():
 @app.route("/ask", methods=["POST"])
 def ask():
 
-    global pdf_text
-
     try:
+
+        data = request.get_json(silent=True) or {}
+
+        question = data.get(
+            "question",
+            ""
+        ).strip()
+
+        pdf_text = data.get(
+            "pdf_text",
+            ""
+        )
 
         if not pdf_text:
 
@@ -108,10 +114,6 @@ def ask():
                 "success": False,
                 "answer": "Please upload a PDF first."
             })
-
-        data = request.get_json(silent=True) or {}
-
-        question = data.get("question", "").strip()
 
         if not question:
 
@@ -147,9 +149,14 @@ def ask():
 @app.route("/summary", methods=["POST"])
 def summary():
 
-    global pdf_text
-
     try:
+
+        data = request.get_json(silent=True) or {}
+
+        pdf_text = data.get(
+            "pdf_text",
+            ""
+        )
 
         if not pdf_text:
 
@@ -158,7 +165,9 @@ def summary():
                 "answer": "Please upload a PDF first."
             })
 
-        result = summarize_pdf(pdf_text)
+        result = summarize_pdf(
+            pdf_text
+        )
 
         return jsonify({
             "success": True,
@@ -182,9 +191,14 @@ def summary():
 @app.route("/two-mark", methods=["POST"])
 def two_mark():
 
-    global pdf_text
-
     try:
+
+        data = request.get_json(silent=True) or {}
+
+        pdf_text = data.get(
+            "pdf_text",
+            ""
+        )
 
         if not pdf_text:
 
@@ -220,9 +234,14 @@ def two_mark():
 @app.route("/sixteen-mark", methods=["POST"])
 def sixteen_mark():
 
-    global pdf_text
-
     try:
+
+        data = request.get_json(silent=True) or {}
+
+        pdf_text = data.get(
+            "pdf_text",
+            ""
+        )
 
         if not pdf_text:
 
@@ -258,9 +277,14 @@ def sixteen_mark():
 @app.route("/important-questions", methods=["POST"])
 def important_questions():
 
-    global pdf_text
-
     try:
+
+        data = request.get_json(silent=True) or {}
+
+        pdf_text = data.get(
+            "pdf_text",
+            ""
+        )
 
         if not pdf_text:
 
