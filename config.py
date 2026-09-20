@@ -15,5 +15,5 @@ if not GOOGLE_API_KEY:
 
     raise ValueError(
         "GOOGLE_API_KEY is missing. "
-        "Please add it to the environment variables."
+        "Please add it in Render Environment Variables."
     )
