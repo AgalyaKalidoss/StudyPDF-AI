@@ -1,6 +1,7 @@
 const pdfInput = document.getElementById("pdfInput");
 
-const uploadStatus = document.getElementById("uploadStatus");
+const uploadStatus =
+    document.getElementById("uploadStatus");
 
 const questionInput =
     document.getElementById("questionInput");
@@ -15,9 +16,9 @@ const resultContent =
     document.getElementById("resultContent");
 
 
-/* =========================
-   PDF UPLOAD
-========================= */
+// =========================
+// PDF UPLOAD
+// =========================
 
 pdfInput.addEventListener("change", async function () {
 
@@ -35,15 +36,12 @@ pdfInput.addEventListener("change", async function () {
         return;
     }
 
-
     uploadStatus.innerText =
         "Uploading and processing PDF...";
-
 
     const formData = new FormData();
 
     formData.append("pdf", file);
-
 
     try {
 
@@ -55,50 +53,51 @@ pdfInput.addEventListener("change", async function () {
             }
         );
 
-
         const data = await response.json();
-
 
         if (data.success) {
 
-    uploadStatus.innerText =
-        `✓ ${data.filename} uploaded successfully — ${data.characters} characters extracted.`;
+            uploadStatus.innerText =
+                `✓ ${data.filename} uploaded successfully — ${data.characters} characters extracted.`;
 
-    document.getElementById("pdfStatus").innerText =
-        "Ready ✓";
+            const pdfStatus =
+                document.getElementById("pdfStatus");
 
-} else {
+            if (pdfStatus) {
+                pdfStatus.innerText = "Ready ✓";
+            }
+
+        } else {
 
             uploadStatus.innerText =
-                data.message;
+                data.message || "Upload failed.";
+
         }
 
-
     } catch (error) {
+
+        console.error("UPLOAD ERROR:", error);
 
         uploadStatus.innerText =
             "Upload failed. Please try again.";
 
-        console.error(error);
     }
 
 });
 
 
-/* =========================
-   ASK QUESTION
-========================= */
+// =========================
+// ASK QUESTION
+// =========================
 
 async function askQuestion() {
 
     const question =
         questionInput.value.trim();
 
-
     if (!question) {
         return;
     }
-
 
     addMessage(
         "You",
@@ -106,16 +105,13 @@ async function askQuestion() {
         "user"
     );
 
-
     questionInput.value = "";
-
 
     addMessage(
         "StudyPDF AI",
         "Thinking...",
         "ai"
     );
-
 
     try {
 
@@ -135,40 +131,67 @@ async function askQuestion() {
             }
         );
 
-
         const data =
             await response.json();
-
 
         const messages =
             document.querySelectorAll(
                 ".message.ai"
             );
 
+        if (messages.length > 0) {
+
+            const lastMessage =
+                messages[messages.length - 1];
+
+            const messageText =
+                lastMessage.querySelector(
+                    ".message-text"
+                );
+
+            if (data.success) {
+
+                messageText.innerHTML =
+                    marked.parse(data.answer);
+
+            } else {
+
+                messageText.innerText =
+                    data.answer ||
+                    "Something went wrong.";
+
+            }
+
+        }
+
+    } catch (error) {
+
+        console.error("ASK ERROR:", error);
+
+        const messages =
+            document.querySelectorAll(
+                ".message.ai"
+            );
 
         if (messages.length > 0) {
 
             messages[
-    messages.length - 1
-].querySelector(
-    ".message-text"
-).innerHTML =
-    marked.parse(data.answer);
+                messages.length - 1
+            ].querySelector(
+                ".message-text"
+            ).innerText =
+                "Something went wrong. Please try again.";
+
         }
-
-
-    } catch (error) {
-
-        console.error(error);
 
     }
 
 }
 
 
-/* =========================
-   ADD MESSAGE
-========================= */
+// =========================
+// ADD MESSAGE
+// =========================
 
 function addMessage(
     sender,
@@ -179,28 +202,22 @@ function addMessage(
     const message =
         document.createElement("div");
 
-
     message.className =
         `message ${type}`;
-
 
     message.style.marginBottom =
         "15px";
 
-
     message.style.padding =
         "14px";
 
-
     message.style.borderRadius =
         "12px";
-
 
     message.style.background =
         type === "user"
             ? "#eeeaff"
             : "#f7f5fc";
-
 
     message.innerHTML = `
         <strong>${sender}</strong>
@@ -210,27 +227,30 @@ function addMessage(
         </div>
     `;
 
-
     chatMessages.appendChild(message);
-
 
     chatMessages.scrollTop =
         chatMessages.scrollHeight;
 }
 
 
-/* =========================
-   RESULT FUNCTIONS
-========================= */
+// =========================
+// SUMMARY
+// =========================
 
-async function showSummary() {
+async function generateSummary() {
 
     await runTool(
         "/summary",
-        "Generating summary..."
+        "Generating your summary..."
     );
+
 }
 
+
+// =========================
+// 2 MARK
+// =========================
 
 async function generateTwoMark() {
 
@@ -238,8 +258,13 @@ async function generateTwoMark() {
         "/two-mark",
         "Generating 2-mark questions..."
     );
+
 }
 
+
+// =========================
+// 16 MARK
+// =========================
 
 async function generateSixteenMark() {
 
@@ -247,8 +272,13 @@ async function generateSixteenMark() {
         "/sixteen-mark",
         "Generating 16-mark questions..."
     );
+
 }
 
+
+// =========================
+// IMPORTANT QUESTIONS
+// =========================
 
 async function generateImportantQuestions() {
 
@@ -256,26 +286,20 @@ async function generateImportantQuestions() {
         "/important-questions",
         "Finding important questions..."
     );
+
 }
 
 
-/* =========================
-   TOOL HANDLER
-========================= */
+// =========================
+// TOOL HANDLER
+// =========================
 
 async function runTool(
     endpoint,
     loadingText
 ) {
 
-    resultCard.classList.remove(
-        "hidden"
-    );
-
-
-    resultContent.innerText =
-        loadingText;
-
+    showLoading(loadingText);
 
     try {
 
@@ -287,28 +311,64 @@ async function runTool(
                 }
             );
 
-
         const data =
             await response.json();
 
+        if (data.success) {
 
-        resultContent.innerHTML =
-    marked.parse(data.answer);
+            resultContent.innerHTML =
+                marked.parse(
+                    data.answer
+                );
 
+        } else {
+
+            resultContent.innerText =
+                data.answer ||
+                data.message ||
+                "Something went wrong.";
+
+        }
 
     } catch (error) {
 
-        resultContent.innerText =
-            "Something went wrong.";
+        console.error(
+            "TOOL ERROR:",
+            error
+        );
 
-        console.error(error);
+        resultContent.innerText =
+            "Something went wrong. Please try again.";
     }
+
 }
 
 
-/* =========================
-   ENTER KEY
-========================= */
+// =========================
+// LOADING
+// =========================
+
+function showLoading(
+    message = "AI is thinking..."
+) {
+
+    resultCard.classList.remove(
+        "hidden"
+    );
+
+    resultContent.innerHTML = `
+        <div class="ai-thinking">
+            <div class="ai-spinner"></div>
+            <span>${message}</span>
+        </div>
+    `;
+
+}
+
+
+// =========================
+// QUESTION ENTER KEY
+// =========================
 
 questionInput.addEventListener(
     "keydown",
@@ -316,12 +376,20 @@ questionInput.addEventListener(
 
         if (event.key === "Enter") {
 
+            event.preventDefault();
+
             askQuestion();
 
         }
 
     }
 );
+
+
+// =========================
+// FOCUS QUESTION
+// =========================
+
 function focusQuestion() {
 
     questionInput.focus();
@@ -334,45 +402,14 @@ function focusQuestion() {
 }
 
 
+// =========================
+// CLOSE RESULT
+// =========================
+
 function closeResult() {
 
-    resultCard.classList.add("hidden");
+    resultCard.classList.add(
+        "hidden"
+    );
 
-}
-function showLoading(message = "AI is thinking...") {
-    resultContent.innerHTML = `
-        <div class="ai-thinking">
-            <div class="ai-spinner"></div>
-            <span>${message}</span>
-        </div>
-    `;
-
-    resultCard.classList.remove("hidden");
-}
-function hideLoading() {
-    // Result will be replaced automatically
-}
-async function generateSummary() {
-
-    showLoading("Generating your summary...");
-
-    try {
-
-        const response = await fetch("/summary", {
-            method: "POST"
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            resultContent.innerHTML = marked.parse(data.answer);
-        } else {
-            resultContent.innerText = data.answer;
-        }
-
-    } catch (error) {
-
-        resultContent.innerText =
-            "Something went wrong. Please try again.";
-    }
 }
