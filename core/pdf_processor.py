@@ -1,22 +1,74 @@
+import os
 import pymupdf
 
 
-def extract_pdf_content(uploaded_file):
+def extract_text_from_pdf(source):
     """
-    Extract text from a Flask uploaded PDF file.
+    Extract complete text from a PDF.
+
+    source can be:
+    - a file path string
+    - a Flask uploaded file object
     """
 
-    uploaded_file.seek(0)
+    try:
 
-    pdf_bytes = uploaded_file.read()
+        # If source is a file path
+        if isinstance(source, (str, os.PathLike)):
 
-    if not pdf_bytes:
-        return []
+            document = pymupdf.open(str(source))
 
-    document = pymupdf.open(
-        stream=pdf_bytes,
-        filetype="pdf"
-    )
+        # If source is an uploaded file object
+        else:
+
+            source.seek(0)
+
+            pdf_bytes = source.read()
+
+            document = pymupdf.open(
+                stream=pdf_bytes,
+                filetype="pdf"
+            )
+
+        pages = []
+
+        for page in document:
+
+            text = page.get_text("text").strip()
+
+            if text:
+                pages.append(text)
+
+        document.close()
+
+        return "\n\n".join(pages)
+
+    except Exception as e:
+
+        raise Exception(
+            f"Could not extract PDF text: {str(e)}"
+        )
+
+
+def extract_pdf_content(source):
+    """
+    Extract PDF content page by page.
+    """
+
+    if isinstance(source, (str, os.PathLike)):
+
+        document = pymupdf.open(str(source))
+
+    else:
+
+        source.seek(0)
+
+        pdf_bytes = source.read()
+
+        document = pymupdf.open(
+            stream=pdf_bytes,
+            filetype="pdf"
+        )
 
     pages = []
 
@@ -27,45 +79,17 @@ def extract_pdf_content(uploaded_file):
 
         text = page.get_text("text").strip()
 
-        if text:
-
-            pages.append({
-                "page": page_number,
-                "text": text
-            })
+        pages.append({
+            "page": page_number,
+            "text": text
+        })
 
     document.close()
 
     return pages
 
 
-def extract_text_from_pdf(source):
-    """
-    Accept either:
-    - Flask uploaded file
-    - PDF file path
-    """
-
-    if isinstance(source, str):
-
-        with open(
-            source,
-            "rb"
-        ) as file:
-
-            pages = extract_pdf_content(file)
-
-    else:
-
-        pages = extract_pdf_content(source)
-
-    return get_full_text(pages)
-
-
 def get_full_text(pages):
-    """
-    Combine all PDF pages into one text string.
-    """
 
     sections = []
 
@@ -109,8 +133,5 @@ def get_non_empty_pages(pages):
     return [
         page
         for page in pages
-        if page.get(
-            "text",
-            ""
-        ).strip()
+        if page.get("text", "").strip()
     ]
