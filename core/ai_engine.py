@@ -3,9 +3,9 @@ from google import genai
 from config import GOOGLE_API_KEY
 
 
-# ==========================================
+# =====================================================
 # GEMINI CLIENT
-# ==========================================
+# =====================================================
 
 client = genai.Client(
     api_key=GOOGLE_API_KEY
@@ -15,38 +15,39 @@ client = genai.Client(
 MODEL_NAME = "gemini-3.6-flash"
 
 
-# ==========================================
-# COMMON AI FUNCTION
-# ==========================================
+# =====================================================
+# GENERATE RESPONSE
+# =====================================================
 
 def generate_response(prompt):
 
     try:
 
         interaction = client.interactions.create(
+
             model=MODEL_NAME,
+
             input=prompt
+
         )
 
-        if interaction.output_text:
 
-            return interaction.output_text.strip()
+        if not interaction.output_text:
 
-        return "No response was generated."
+            return "No response was generated."
+
+
+        return interaction.output_text.strip()
+
 
     except Exception as e:
-
-        print(
-            "GEMINI ERROR:",
-            repr(e)
-        )
 
         return f"AI Error: {str(e)}"
 
 
-# ==========================================
+# =====================================================
 # ASK PDF
-# ==========================================
+# =====================================================
 
 def ask_pdf(
     question,
@@ -59,35 +60,37 @@ You are StudyPDF AI, an academic assistant.
 Answer the student's question using ONLY
 the information provided in the PDF.
 
-Rules:
+If the answer cannot be found in the PDF, say:
 
-1. Do not use outside information.
-2. Do not invent facts.
-3. If the answer is not available in the PDF,
-   clearly say that it was not found.
-4. Give a clear and student-friendly answer.
-5. Use headings or bullet points when useful.
+"I couldn't find this information in the uploaded PDF."
+
+Do not invent information.
+
+Give the answer clearly and academically.
 
 Question:
 {question}
 
-PDF CONTENT:
+PDF Content:
 {pdf_text}
 """
 
-    return generate_response(prompt)
+
+    return generate_response(
+        prompt
+    )
 
 
-# ==========================================
+# =====================================================
 # SUMMARY
-# ==========================================
+# =====================================================
 
 def summarize_pdf(pdf_text):
 
     prompt = f"""
 You are StudyPDF AI.
 
-Create a useful academic summary of the uploaded PDF.
+Create a clear academic summary of the PDF.
 
 Use this structure:
 
@@ -103,24 +106,23 @@ Use this structure:
 
 ## Quick Revision Notes
 
-Rules:
+Keep the explanation student-friendly.
 
-- Use ONLY the PDF.
-- Do not invent information.
-- Keep it student-friendly.
-- Highlight exam-relevant points.
-- Avoid unnecessary repetition.
+Use ONLY the uploaded PDF.
 
-PDF CONTENT:
+PDF Content:
 {pdf_text}
 """
 
-    return generate_response(prompt)
+
+    return generate_response(
+        prompt
+    )
 
 
-# ==========================================
-# TOPIC EXTRACTION
-# ==========================================
+# =====================================================
+# TOPIC
+# =====================================================
 
 def extract_topic(
     topic,
@@ -130,9 +132,9 @@ def extract_topic(
     prompt = f"""
 You are StudyPDF AI.
 
-Find the topic "{topic}" in the uploaded PDF.
+Find the topic "{topic}" in the PDF.
 
-Explain ONLY information related to that topic.
+Explain ONLY information related to this topic.
 
 Use:
 
@@ -150,21 +152,23 @@ Use:
 
 ## Exam Notes
 
-If the topic cannot be found,
-say:
+If the topic does not exist, say:
 
 "I couldn't find this topic in the uploaded PDF."
 
-PDF CONTENT:
+PDF Content:
 {pdf_text}
 """
 
-    return generate_response(prompt)
+
+    return generate_response(
+        prompt
+    )
 
 
-# ==========================================
+# =====================================================
 # 2-MARK QUESTIONS
-# ==========================================
+# =====================================================
 
 def generate_two_mark_questions(
     pdf_text,
@@ -176,45 +180,40 @@ You are an expert university examination
 question generator.
 
 Using ONLY the uploaded PDF, generate
-{count} important 2-mark questions
-with short answers.
+{count} important 2-mark questions with answers.
 
-Use this exact style:
+Format:
 
 ### 1. Question
-
 **Answer:** Short and precise answer.
 
 ### 2. Question
-
 **Answer:** Short and precise answer.
 
 Focus on:
 
 - Definitions
-- Important concepts
-- Key facts
+- Concepts
+- Important facts
 - Short explanations
-- Terminology
-- Important formulas if present
 
-Rules:
+Avoid duplicates.
 
-- Use ONLY the PDF.
-- Do not invent information.
-- Avoid duplicate questions.
-- Answers should be suitable for a 2-mark exam question.
+Do not invent information.
 
-PDF CONTENT:
+PDF Content:
 {pdf_text}
 """
 
-    return generate_response(prompt)
+
+    return generate_response(
+        prompt
+    )
 
 
-# ==========================================
+# =====================================================
 # 16-MARK QUESTIONS
-# ==========================================
+# =====================================================
 
 def generate_sixteen_mark_questions(
     pdf_text,
@@ -227,7 +226,7 @@ preparation assistant.
 
 Using ONLY the uploaded PDF, generate
 {count} important 16-mark questions
-with detailed answers.
+and detailed answers.
 
 For every question use:
 
@@ -249,24 +248,23 @@ For every question use:
 
 ## Conclusion
 
-Rules:
+Answers must be detailed and exam-oriented.
 
-- Use ONLY the PDF.
-- Do not invent information.
-- Make answers detailed.
-- Make answers suitable for university examinations.
-- Avoid duplicate questions.
+Do not invent information.
 
-PDF CONTENT:
+PDF Content:
 {pdf_text}
 """
 
-    return generate_response(prompt)
+
+    return generate_response(
+        prompt
+    )
 
 
-# ==========================================
+# =====================================================
 # IMPORTANT QUESTIONS
-# ==========================================
+# =====================================================
 
 def generate_important_questions(
     pdf_text,
@@ -275,12 +273,12 @@ def generate_important_questions(
 
     prompt = f"""
 You are an experienced university
-examination preparation expert.
+exam preparation assistant.
 
-Analyze the uploaded PDF and generate
-{count} important examination questions.
+Analyze the uploaded PDF and identify
+{count} important questions.
 
-Organize them into:
+Divide them into:
 
 ## Very Important
 
@@ -291,19 +289,17 @@ Organize them into:
 For each question provide:
 
 - Question
-- Topic
 - Priority
+- Topic
 - Why it is important
 
-Rules:
+Use ONLY the uploaded PDF.
 
-- Use ONLY the uploaded PDF.
-- Do not invent information.
-- Avoid duplicates.
-- Focus on topics actually present in the PDF.
-
-PDF CONTENT:
+PDF Content:
 {pdf_text}
 """
 
-    return generate_response(prompt)
+
+    return generate_response(
+        prompt
+    )
