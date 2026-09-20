@@ -3,7 +3,10 @@ import pymupdf
 
 def extract_pdf_content(uploaded_file):
     """
-    Extract text from every page of an uploaded PDF.
+    Extract text from an uploaded PDF.
+
+    Returns:
+        A list of dictionaries containing page number and text.
     """
 
     uploaded_file.seek(0)
@@ -31,30 +34,50 @@ def extract_pdf_content(uploaded_file):
     return pages
 
 
+def extract_text_from_pdf(uploaded_file):
+    """
+    Compatibility function for the Flask application.
+
+    Returns the complete extracted PDF text.
+    """
+
+    pages = extract_pdf_content(uploaded_file)
+
+    return get_full_text(pages)
+
+
 def get_full_text(pages):
     """
-    Combine extracted page text into one string.
+    Combine all extracted pages into one text string.
     """
 
     sections = []
 
     for page in pages:
 
-        if page["text"].strip():
+        text = page.get("text", "").strip()
+
+        if text:
 
             sections.append(
-                f"--- Page {page['page']} ---\n"
-                f"{page['text']}"
+                f"--- Page {page['page']} ---\n{text}"
             )
 
     return "\n\n".join(sections)
 
 
 def get_page_count(pages):
+    """
+    Return the number of pages.
+    """
+
     return len(pages)
 
 
 def get_word_count(pages):
+    """
+    Return the number of words.
+    """
 
     full_text = get_full_text(pages)
 
@@ -62,6 +85,9 @@ def get_word_count(pages):
 
 
 def get_character_count(pages):
+    """
+    Return the number of characters.
+    """
 
     full_text = get_full_text(pages)
 
@@ -69,9 +95,12 @@ def get_character_count(pages):
 
 
 def get_non_empty_pages(pages):
+    """
+    Return only pages containing text.
+    """
 
     return [
         page
         for page in pages
-        if page["text"].strip()
+        if page.get("text", "").strip()
     ]
