@@ -8,21 +8,21 @@ client = genai.Client(
 )
 
 
-MODEL_NAME = "gemini-2.0-flash"
+MODEL_NAME = "gemini-3.6-flash"
 
 
 def generate_response(prompt):
 
     try:
 
-        response = client.models.generate_content(
+        interaction = client.interactions.create(
             model=MODEL_NAME,
-            contents=prompt
+            input=prompt
         )
 
-        if response and response.text:
+        if interaction.output_text:
 
-            return response.text.strip()
+            return interaction.output_text.strip()
 
         return "No response was generated."
 
