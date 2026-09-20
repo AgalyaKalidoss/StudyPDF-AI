@@ -2,23 +2,49 @@
 // ELEMENTS
 // =====================================================
 
-const pdfInput =
-    document.getElementById("pdfInput");
+const pdfInput = document.getElementById("pdfInput");
+const uploadStatus = document.getElementById("uploadStatus");
+const questionInput = document.getElementById("questionInput");
+const chatMessages = document.getElementById("chatMessages");
+const resultCard = document.getElementById("resultCard");
+const resultContent = document.getElementById("resultContent");
 
-const uploadStatus =
-    document.getElementById("uploadStatus");
 
-const questionInput =
-    document.getElementById("questionInput");
+// =====================================================
+// SAFE TEXT / MARKDOWN RENDERING
+// =====================================================
 
-const chatMessages =
-    document.getElementById("chatMessages");
+function renderAIResponse(text) {
 
-const resultCard =
-    document.getElementById("resultCard");
+    if (!text) {
+        return "No response received.";
+    }
 
-const resultContent =
-    document.getElementById("resultContent");
+    // If marked.js is available
+    if (
+        typeof marked !== "undefined" &&
+        typeof marked.parse === "function"
+    ) {
+
+        return marked.parse(text);
+
+    }
+
+    // Fallback if marked.js is unavailable
+    return escapeHtml(text)
+        .replace(/\n/g, "<br>");
+}
+
+
+function escapeHtml(text) {
+
+    const div =
+        document.createElement("div");
+
+    div.innerText = text;
+
+    return div.innerHTML;
+}
 
 
 // =====================================================
@@ -31,9 +57,7 @@ if (pdfInput) {
         "change",
         async function () {
 
-            const file =
-                this.files[0];
-
+            const file = this.files[0];
 
             if (!file) {
                 return;
@@ -60,7 +84,6 @@ if (pdfInput) {
             const formData =
                 new FormData();
 
-
             formData.append(
                 "pdf",
                 file
@@ -81,6 +104,12 @@ if (pdfInput) {
 
                 const data =
                     await response.json();
+
+
+                console.log(
+                    "UPLOAD RESPONSE:",
+                    data
+                );
 
 
                 if (data.success) {
@@ -110,7 +139,6 @@ if (pdfInput) {
 
                 }
 
-
             } catch (error) {
 
                 console.error(
@@ -120,7 +148,8 @@ if (pdfInput) {
 
 
                 uploadStatus.innerText =
-                    "Upload failed. Please try again.";
+                    "Upload failed: " +
+                    error.message;
 
             }
 
@@ -150,7 +179,6 @@ async function askQuestion() {
     }
 
 
-    // Add user message
     addMessage(
         "You",
         question,
@@ -161,7 +189,6 @@ async function askQuestion() {
     questionInput.value = "";
 
 
-    // Add temporary AI message
     addMessage(
         "StudyPDF AI",
         "Thinking...",
@@ -201,12 +228,8 @@ async function askQuestion() {
                     },
 
                     body: JSON.stringify({
-
-                        question:
-                            question
-
+                        question: question
                     })
-
                 }
             );
 
@@ -215,21 +238,27 @@ async function askQuestion() {
             await response.json();
 
 
+        console.log(
+            "ASK RESPONSE:",
+            data
+        );
+
+
         if (data.success) {
 
             messageText.innerHTML =
-                marked.parse(
-                    data.answer || ""
+                renderAIResponse(
+                    data.answer
                 );
 
         } else {
 
             messageText.innerText =
                 data.answer ||
+                data.message ||
                 "Something went wrong.";
 
         }
-
 
     } catch (error) {
 
@@ -240,7 +269,8 @@ async function askQuestion() {
 
 
         messageText.innerText =
-            "Something went wrong. Please try again.";
+            "Error: " +
+            error.message;
 
     }
 
@@ -258,9 +288,7 @@ function addMessage(
 ) {
 
     const message =
-        document.createElement(
-            "div"
-        );
+        document.createElement("div");
 
 
     message.className =
@@ -286,20 +314,14 @@ function addMessage(
 
 
     const strong =
-        document.createElement(
-            "strong"
-        );
-
+        document.createElement("strong");
 
     strong.innerText =
         sender;
 
 
     const textDiv =
-        document.createElement(
-            "div"
-        );
-
+        document.createElement("div");
 
     textDiv.className =
         "message-text";
@@ -338,8 +360,6 @@ function addMessage(
 // SUMMARY
 // =====================================================
 
-// IMPORTANT:
-// HTML calls showSummary()
 function showSummary() {
 
     runTool(
@@ -350,8 +370,7 @@ function showSummary() {
 }
 
 
-// Keep this too in case another button
-// calls generateSummary()
+// Backup function
 function generateSummary() {
 
     showSummary();
@@ -360,7 +379,7 @@ function generateSummary() {
 
 
 // =====================================================
-// 2-MARK
+// 2 MARK
 // =====================================================
 
 function generateTwoMark() {
@@ -374,7 +393,7 @@ function generateTwoMark() {
 
 
 // =====================================================
-// 16-MARK
+// 16 MARK
 // =====================================================
 
 function generateSixteenMark() {
@@ -417,42 +436,114 @@ async function runTool(
 
     try {
 
+        console.log(
+            "Calling:",
+            endpoint
+        );
+
+
         const response =
             await fetch(
                 endpoint,
                 {
-                    method: "POST"
+                    method: "POST",
+
+                    headers: {
+                        "Accept":
+                            "application/json"
+                    }
                 }
             );
 
 
-        const data =
-            await response.json();
+        console.log(
+            "HTTP STATUS:",
+            response.status
+        );
+
+
+        // Read response as text first.
+        // This helps us see non-JSON errors.
+        const rawText =
+            await response.text();
 
 
         console.log(
-            endpoint,
+            "RAW RESPONSE:",
+            rawText
+        );
+
+
+        let data;
+
+
+        try {
+
+            data =
+                JSON.parse(rawText);
+
+        } catch (jsonError) {
+
+            resultContent.innerHTML = `
+
+                <div class="tool-error">
+
+                    <strong>
+                        Server returned an invalid response.
+                    </strong>
+
+                    <br><br>
+
+                    <pre>
+${escapeHtml(rawText)}
+                    </pre>
+
+                </div>
+
+            `;
+
+            return;
+        }
+
+
+        console.log(
+            "PARSED DATA:",
             data
         );
 
 
-        if (data.success) {
+        if (
+            response.ok &&
+            data.success
+        ) {
 
             resultContent.innerHTML =
-                marked.parse(
-                    data.answer || ""
+                renderAIResponse(
+                    data.answer
                 );
+
 
         } else {
 
             resultContent.innerHTML = `
+
                 <div class="tool-error">
-                    ${escapeHtml(
-                        data.answer ||
-                        data.message ||
-                        "Something went wrong."
-                    )}
+
+                    <strong>
+                        ${escapeHtml(
+                            data.answer ||
+                            data.message ||
+                            "Request failed."
+                        )}
+                    </strong>
+
+                    <br><br>
+
+                    HTTP Status:
+                    ${response.status}
+
                 </div>
+
             `;
 
         }
@@ -466,8 +557,23 @@ async function runTool(
         );
 
 
-        resultContent.innerText =
-            "Something went wrong. Please try again.";
+        resultContent.innerHTML = `
+
+            <div class="tool-error">
+
+                <strong>
+                    Request failed
+                </strong>
+
+                <br><br>
+
+                ${escapeHtml(
+                    error.message
+                )}
+
+            </div>
+
+        `;
 
     }
 
@@ -481,6 +587,17 @@ async function runTool(
 function showLoading(
     message = "AI is thinking..."
 ) {
+
+    if (!resultCard ||
+        !resultContent) {
+
+        console.error(
+            "Result card elements not found."
+        );
+
+        return;
+    }
+
 
     resultCard.classList.remove(
         "hidden"
@@ -564,29 +681,12 @@ function focusQuestion() {
 
 function closeResult() {
 
-    resultCard.classList.add(
-        "hidden"
-    );
+    if (resultCard) {
 
-}
-
-
-// =====================================================
-// ESCAPE HTML
-// =====================================================
-
-function escapeHtml(text) {
-
-    const div =
-        document.createElement(
-            "div"
+        resultCard.classList.add(
+            "hidden"
         );
 
-
-    div.innerText =
-        text;
-
-
-    return div.innerHTML;
+    }
 
 }
