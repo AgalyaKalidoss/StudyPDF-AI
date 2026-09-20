@@ -10,6 +10,9 @@ def extract_pdf_content(uploaded_file):
 
     pdf_bytes = uploaded_file.read()
 
+    if not pdf_bytes:
+        return []
+
     document = pymupdf.open(
         stream=pdf_bytes,
         filetype="pdf"
@@ -17,11 +20,15 @@ def extract_pdf_content(uploaded_file):
 
     pages = []
 
-    for page_number, page in enumerate(document, start=1):
+    for page_number, page in enumerate(
+        document,
+        start=1
+    ):
 
         text = page.get_text("text").strip()
 
         if text:
+
             pages.append({
                 "page": page_number,
                 "text": text
@@ -34,14 +41,17 @@ def extract_pdf_content(uploaded_file):
 
 def extract_text_from_pdf(source):
     """
-    Extract complete text from either:
-    - Flask uploaded file object
+    Accept either:
+    - Flask uploaded file
     - PDF file path
     """
 
     if isinstance(source, str):
 
-        with open(source, "rb") as file:
+        with open(
+            source,
+            "rb"
+        ) as file:
 
             pages = extract_pdf_content(file)
 
@@ -54,14 +64,17 @@ def extract_text_from_pdf(source):
 
 def get_full_text(pages):
     """
-    Combine all page text into one string.
+    Combine all PDF pages into one text string.
     """
 
     sections = []
 
     for page in pages:
 
-        text = page.get("text", "").strip()
+        text = page.get(
+            "text",
+            ""
+        ).strip()
 
         if text:
 
@@ -73,15 +86,22 @@ def get_full_text(pages):
 
 
 def get_page_count(pages):
+
     return len(pages)
 
 
 def get_word_count(pages):
-    return len(get_full_text(pages).split())
+
+    text = get_full_text(pages)
+
+    return len(text.split())
 
 
 def get_character_count(pages):
-    return len(get_full_text(pages))
+
+    text = get_full_text(pages)
+
+    return len(text)
 
 
 def get_non_empty_pages(pages):
@@ -89,5 +109,8 @@ def get_non_empty_pages(pages):
     return [
         page
         for page in pages
-        if page.get("text", "").strip()
+        if page.get(
+            "text",
+            ""
+        ).strip()
     ]
